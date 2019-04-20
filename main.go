@@ -54,19 +54,18 @@ More info: https://github.com/codercom/sshcode
 
 	const codeServerPath = "/tmp/codessh-code-server"
 
-	downloadScript := `/bin/bash -c 'set -euxo pipefail || exit 1
-wget -q https://codesrv-ci.cdr.sh/latest-linux -O ` + codeServerPath + `
+	downloadScript := `set -euxo pipefail || exit 1
+
 mkdir -p ~/.local/share/code-server
 cd ` + filepath.Dir(codeServerPath) + `
 wget -N https://codesrv-ci.cdr.sh/latest-linux
 [ -f ` + codeServerPath + ` ] && rm ` + codeServerPath + `
 ln latest-linux ` + codeServerPath + `
-chmod +x ` + codeServerPath + `
-'`
+chmod +x ` + codeServerPath
 	// Downloads the latest code-server and allows it to be executed.
 	sshCmdStr := fmt.Sprintf("ssh" +
-		" -tt " + *sshFlags + " " +
-		host,
+		" " + *sshFlags + " " +
+		host + " /bin/bash",
 	)
 	sshCmd := exec.Command("sh", "-c", sshCmdStr)
 	sshCmd.Stdout = os.Stdout
@@ -74,7 +73,10 @@ chmod +x ` + codeServerPath + `
 	sshCmd.Stdin = strings.NewReader(downloadScript)
 	err := sshCmd.Run()
 	if err != nil {
-		flog.Fatal("failed to update code-server: %v", err)
+		flog.Fatal("failed to update code-server: %v\n---ssh cmd---\n%s\n---download script---\n%s", err,
+			sshCmdStr,
+			downloadScript,
+		)
 	}
 
 	if !(*skipSyncFlag) {
